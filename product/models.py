@@ -30,7 +30,7 @@ class Product(models.Model):
     name         = models.CharField(max_length=200)
     category     = models.ForeignKey(Category, on_delete=models.CASCADE)
     sub_category = models.ForeignKey(SubCategory, on_delete=models.CASCADE)
-    #creator      = models.ForeignKey('user.Creator', on_delete=models.CASCADE)
+    creator      = models.ForeignKey('user.Creator', on_delete=models.CASCADE)
     level        = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True)
     coupon       = models.ForeignKey(Coupon, on_delete=models.SET_DEFAULT, default=0)
     price        = models.DecimalField(max_digits=16, decimal_places=2)
@@ -59,7 +59,7 @@ class ProductTag(models.Model):
 
 class Review(models.Model):
     product  = models.ForeignKey(Product, on_delete=models.CASCADE)
-    #user     = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user     = models.ForeignKey('user.User', on_delete=models.CASCADE)
     good_bad = models.BooleanField()
     content  = models.TextField()
 
@@ -75,14 +75,14 @@ class Image(models.Model):
 
 class ProductLike(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    #user    = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user    = models.ForeignKey('user.User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'product_likes'
 
 class Post(models.Model):
     product    = models.ForeignKey(Product, on_delete=models.CASCADE)
-    #user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
     content    = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -91,14 +91,14 @@ class Post(models.Model):
 
 class PostLike(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    #user = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('user.User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'post_likes'
 
 class Comment(models.Model):
     post       = models.ForeignKey(Post, on_delete=models.CASCADE)
-    #user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
     content    = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -108,7 +108,7 @@ class Comment(models.Model):
 
 class Watched(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    #user    = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user    = models.ForeignKey('user.User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'watched'
@@ -157,7 +157,7 @@ class BasicInfo(models.Model):
 
 class Cheered(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    #user    = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    user    = models.ForeignKey('user.User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'cheered'
