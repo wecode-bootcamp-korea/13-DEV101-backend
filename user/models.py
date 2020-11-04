@@ -1,5 +1,13 @@
 from django.db import models
 
+class Creator(models.Model):
+    image_url    = models.URLField(max_length=2000)
+    nickname     = models.CharField(max_length=45)
+    introduction = models.TextField()
+
+    class Meta:
+        db_table = 'creators'
+
 class User(models.Model):
     name         = models.CharField(max_length=45)
     email        = models.EmailField(max_length=300, unique=True)
@@ -14,10 +22,3 @@ class User(models.Model):
     class Meta:
         db_table = 'users'
 
-class Creator(models.Model):
-    image_url    = models.URLField(max_length=2000)
-    nickname     = models.CharField(max_length=45)
-    introduction = models.TextField()
-
-    class Meta:
-        db_table = 'creators'
