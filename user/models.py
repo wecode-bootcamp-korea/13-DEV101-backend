@@ -17,7 +17,8 @@ class User(models.Model):
     is_active    = models.BooleanField(default=False)
     creator      = models.OneToOneField(Creator, on_delete=models.SET_NULL, null=True)
     created_at   = models.DateTimeField(auto_now_add=True)
-    updated_at   = models.DateField(auto_now=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+    cheer_point  = models.PositiveIntegerField(default=10)
 
     class Meta:
         db_table = 'users'

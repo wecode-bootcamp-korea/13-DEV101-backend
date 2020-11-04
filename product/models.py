@@ -27,18 +27,21 @@ class Level(models.Model):
         db_table = 'levels'
 
 class Product(models.Model):
-    name         = models.CharField(max_length=200)
-    category     = models.ForeignKey(Category, on_delete=models.CASCADE)
-    sub_category = models.ForeignKey(SubCategory, on_delete=models.CASCADE)
-    creator      = models.ForeignKey('user.Creator', on_delete=models.CASCADE)
-    level        = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True)
-    coupon       = models.ForeignKey(Coupon, on_delete=models.SET_DEFAULT, default=0)
-    price        = models.DecimalField(max_digits=16, decimal_places=2)
-    discount     = models.DecimalField(max_digits=3, decimal_places=2)
-    created_at   = models.DateTimeField(auto_now_add=True)
-    updated_at   = models.DateTimeField(auto_now=True)
-    is_checked   = models.BooleanField()
-    is_open      = models.BooleanField()
+    name           = models.CharField(max_length=200)
+    category       = models.ForeignKey(Category, on_delete=models.CASCADE)
+    sub_category   = models.ForeignKey(SubCategory, on_delete=models.CASCADE)
+    creator        = models.ForeignKey('user.Creator', on_delete=models.CASCADE)
+    level          = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True)
+    coupon         = models.ForeignKey(Coupon, on_delete=models.SET_DEFAULT, default=0)
+    price          = models.DecimalField(max_digits=16, decimal_places=2)
+    discount       = models.DecimalField(max_digits=3, decimal_places=2)
+    chapter        = models.PositiveIntegerField(default=1)
+    chapter_detail = models.PositiveIntegerField(default=0)
+    subtitle_flag  = models.BooleanField(default=False)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
+    is_checked     = models.BooleanField(default=True)
+    is_open        = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'products'
@@ -60,14 +63,14 @@ class ProductTag(models.Model):
 class Review(models.Model):
     product  = models.ForeignKey(Product, on_delete=models.CASCADE)
     user     = models.ForeignKey('user.User', on_delete=models.CASCADE)
-    good_bad = models.BooleanField()
+    good_bad = models.BooleanField(null=True)
     content  = models.TextField()
 
     class Meta:
         db_table = 'reviews'
 
 class Image(models.Model):
-    image_url = models.URLField()
+    image_url = models.URLField(max_length=2000)
     product   = models.ForeignKey(Product, on_delete=models.CASCADE)
 
     class Meta:
@@ -114,9 +117,10 @@ class Watched(models.Model):
         db_table = 'watched'
 
 class Introduction(models.Model):
-    theme_url           = models.URLField()
-    process_url         = models.URLField()
-    work_url            = models.URLField()
+    product             = models.ForeignKey(Product, on_delete=models.CASCADE)
+    theme_image_url     = models.URLField(max_length=2000)
+    process_image_url   = models.URLField(max_length=2000)
+    work_image_url      = models.URLField(max_length=2000)
     theme_description   = models.TextField()
     process_description = models.TextField()
     work_description    = models.TextField()
@@ -125,14 +129,14 @@ class Introduction(models.Model):
         db_table = 'introductions'
 
 class TitleCover(models.Model):
-    product       = models.ForeignKey(Product, on_delete=models.CASCADE)
-    title         = models.CharField(max_length=200)
-    cover_url     = models.URLField()
-    thumbnail_url = models.URLField()
+    product             = models.ForeignKey(Product, on_delete=models.CASCADE)
+    title               = models.CharField(max_length=200)
+    cover_image_url     = models.URLField(max_length=2000)
+    thumbnail_image_url = models.URLField(max_length=2000)
 
     class Meta:
         db_table = 'title_covers'
-
+        
 class Survey(models.Model):
     product     = models.ForeignKey(Product, on_delete=models.CASCADE)
     curriculum1 = models.TextField()
@@ -163,17 +167,18 @@ class Cheered(models.Model):
         db_table = 'cheered'
 
 class Summary(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    image   = models.CharField(max_length=200)
+    product   = models.ForeignKey(Product, on_delete=models.CASCADE)
+    image_url = models.URLField(max_length=2000)
 
     class Meta:
         db_table = 'summaries'
 
-class ClassTag(models.Model):
+class SummaryTag(models.Model):
     summary = models.ForeignKey(Summary, on_delete=models.CASCADE)
+    name    = models.CharField(max_length=200)
 
     class Meta:
-        db_table = 'class_tags'
+        db_table = 'summary_tags'
 
 class ChannelType(models.Model):
     name = models.CharField(max_length=45)
@@ -185,7 +190,7 @@ class Channel(models.Model):
     product      = models.ForeignKey(Product, on_delete=models.CASCADE)
     channel_type = models.ForeignKey(ChannelType, on_delete=models.CASCADE)
     name         = models.CharField(max_length=45)
-    url          = models.CharField(max_length=200)
+    channel_url  = models.URLField(max_length=2000)
 
     class Meta:
         db_table = 'channels'
