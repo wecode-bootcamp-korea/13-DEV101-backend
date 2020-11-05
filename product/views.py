@@ -35,7 +35,7 @@ class DetailView(View):
                     'basicinfo_set'
                     ).get(id=product_id)
             )
-            
+
             data={
                 'product_id'   : product.id,
                 'header_images':[
