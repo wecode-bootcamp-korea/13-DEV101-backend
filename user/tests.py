@@ -1,12 +1,101 @@
 import json
 import bcrypt
+import jwt
+import unittest
 
 from django.test    import TestCase,Client
+from unittest.mock  import patch,MagicMock
 
-from user.models    import User,Creator
 from product.models import Product,ProductLike,Image,Category,SubCategory,Level,Coupon,Watched
+from user.models    import User,Creator,SocialPlatform
 
-client = Client()
+from my_settings import SECRET_KEY,ALGORITHM
+
+#client = Client()
+
+class UserSignupTest(TestCase):
+    def setUp(self):
+        client = Client()
+
+    def tearDown(self):
+            User.objects.all().delete()
+
+    def test_post_user_view(self):
+        user = {
+            "name"         : "hn",
+            "email"        : "hgggg@gmail.com",
+            "phone_number" : "01084612249",
+            "password"     : "1234",
+            "re_password"  : "1234"
+        }
+
+
+        response = client.post('/user/signup',json.dumps(user),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+
+class UserSigninTest(TestCase):
+    def setUp(self):
+        client = Client()
+        User.objects.create(
+            email = 'hgggg@gmail.com',
+            password = bcrypt.hashpw("1234".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+            name = "hh",
+            phone_number = "01012331233"
+        )
+
+    def tearDown(self):
+            User.objects.all().delete()
+
+    def test_post_user_view(self):
+        user = {
+            "email"        : "hgggg@gmail.com",
+            "password"     : "1234",
+        }
+
+        response = client.post('/user/signin',json.dumps(user),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+
+class UserSignupTest(TestCase):
+    def setUp(self):
+        client = Client()
+
+    def tearDown(self):
+            User.objects.all().delete()
+
+    def test_post_user_view(self):
+        user = {
+            "name"         : "hn",
+            "email"        : "hgggg@gmail.com",
+            "phone_number" : "01084612249",
+            "password"     : "1234",
+            "re_password"  : "1234"
+        }
+
+
+        response = client.post('/user/signup',json.dumps(user),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+
+class UserSigninTest(TestCase):
+    def setUp(self):
+        client = Client()
+        User.objects.create(
+            email = 'hgggg@gmail.com',
+            password = bcrypt.hashpw("1234".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+            name = "hh",
+            phone_number = "01012331233"
+        )
+
+    def tearDown(self):
+            User.objects.all().delete()
+
+    def test_post_user_view(self):
+        user = {
+            "email"        : "hgggg@gmail.com",
+            "password"     : "1234",
+        }
+
+        response = client.post('/user/signin',json.dumps(user),content_type='application/json')
+        self.assertEqual(response.status_code,201)
 
 class UserSignupTest(TestCase):
     def setUp(self):
@@ -74,7 +163,7 @@ class MyPageTest(TestCase):
         Coupon.objects.create(
             id = 1,
             name = "coupon"
-        )       
+        )
         Product.objects.create(
             id              = 1,
             name            = 'content',
@@ -223,3 +312,33 @@ class MyPageTest(TestCase):
                     "thumpsup": 0
                 }]}]
         })
+
+class KakaoSignInTest(TestCase):
+
+    def setUp(self):
+        SocialPlatform.objects.create(id=1,platform='kakao')
+
+    def tearDown(self):
+        SocialPlatform.objects.get(platform='kakao').delete()
+
+    @patch('user.views.requests')
+    def test_kakao_sign_in(self, mocked_requests):
+
+        client = Client()
+        class KakaoResponse:
+            def json(self):
+                return {
+                    "Authorization" : 'fake_token.1234',
+                    "id"            : "12345",
+                    "kakao_account" : {"profile":{"nickname":"hh"}},
+                    "social"        : "kakao"
+                }
+
+        mocked_requests.get = MagicMock(return_value = KakaoResponse())
+        headers  = {'HTTP_AUTHORIZATION':'fake_token.1234'}
+        response = client.get('/user/kakao/login', **headers)
+        token    = jwt.encode({'id': "12345"},SECRET_KEY,algorithm= ALGORITHM).decode('utf-8')
+        self.assertEqual(response.status_code, 200)
+
+if __name__ == '__main__':
+    unittest.main()

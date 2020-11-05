@@ -3,12 +3,13 @@ import bcrypt
 import jwt
 import re
 import requests
+from user.utils       import user_validator
 
 from django.db.models import Q
 from django.views     import View
 from django.http      import JsonResponse,HttpResponse
 
-from user.models      import User
+from user.models      import User,Creator,SocialPlatform
 from product.models   import Product,Image,Watched,ProductLike
 from my_settings      import SECRET_KEY,ALGORITHM
 
@@ -71,15 +72,22 @@ class SignInView(View):
 
 class KakaoLoginView(View):
     def get(self,request):
-        access_token = request.headers['Authorization']
-        kakao_header = ({'Authorization':f'Bearer {access_token}'})
-        url          = 'https://kapi.kakao.com/v1/user/access_token_info'
+        try:
+            access_token = request.headers['Authorization']
+            kakao_header = ({'Authorization':f'Bearer {access_token}'})
+            url          = 'https://kapi.kakao.com/v1/user/access_token_info'
 
-        response     = requests.request("GET", url, headers=kakao_header)
-        user         = response.json()
+            response     = requests.request("GET", url, headers=kakao_header)
+            user         = response.json()
+
+
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+
 
 #MY_PAGE
 class MyPageView(View):
+    #@user_validator
     def get(self,request):
         try:
             user_id   = request.GET.get('user')
@@ -186,3 +194,34 @@ class MyPageView(View):
 
         except User.DoesNotExist:
             return JsonResponse({'message':'USER DOES NOT EXIST'}, status=400)
+
+class KakaoLoginView(View):
+    def get(self,request):
+        try:
+            access_token = request.headers['Authorization']
+            kakao_header = {'Authorization':f'Bearer {access_token}'}
+
+            url          = 'https://kapi.kakao.com/v2/user/me'
+            response     = requests.get(url, headers=kakao_header)
+            user         = response.json()
+
+            if user['kakao_account']['profile'].get('profile_image_url'):
+                image = user['kakao_account']['profile']['profile_image_url']
+            else:
+                image = None
+
+            if user.get('id'):
+                user = User.objects.get_or_create(
+                    social_login_id = user.get('id'),
+                    name            = user['kakao_account']['profile']['nickname'],
+                    social          = SocialPlatform.objects.get(platform='kakao'),
+                    image_url       = image
+                    )[0]
+                access_token = jwt.encode({'id': user.id},SECRET_KEY,algorithm= ALGORITHM).decode('utf-8')
+
+                return JsonResponse({"access_token": access_token}, status=200)
+
+            return JsonResponse({"Message": "INVALID_TOKEN"}, status=401)
+
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
