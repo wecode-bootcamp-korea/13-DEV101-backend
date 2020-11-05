@@ -8,6 +8,48 @@ from product.models import Product,ProductLike,Image,Category,SubCategory,Level,
 
 client = Client()
 
+class UserSignupTest(TestCase):
+    def setUp(self):
+        client = Client()
+
+    def tearDown(self):
+            User.objects.all().delete()
+
+    def test_post_user_view(self):
+        user = {
+            "name"         : "hn",
+            "email"        : "hgggg@gmail.com",
+            "phone_number" : "01084612249",
+            "password"     : "1234",
+            "re_password"  : "1234"
+        }
+
+
+        response = client.post('/user/signup',json.dumps(user),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+
+class UserSigninTest(TestCase):
+    def setUp(self):
+        client = Client()
+        User.objects.create(
+            email = 'hgggg@gmail.com',
+            password = bcrypt.hashpw("1234".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+            name = "hh",
+            phone_number = "01012331233"
+        )
+
+    def tearDown(self):
+            User.objects.all().delete()
+
+    def test_post_user_view(self):
+        user = {
+            "email"        : "hgggg@gmail.com",
+            "password"     : "1234",
+        }
+
+        response = client.post('/user/signin',json.dumps(user),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+
 class MyPageTest(TestCase):
     def setUp(self):
         Category.objects.create(
@@ -64,20 +106,6 @@ class MyPageTest(TestCase):
             is_open         = False,
             level_id        = 1,
             coupon_id       = 1
-         )
-        Product.objects.create(
-             id              = 2,
-             name            = 'content2',
-             category_id     = 1,
-             sub_category_id = 1,
-             price           = 100000,
-             discount        = 0.32,
-             chapter         = 1,
-             chapter_detail   = 1,
-             subtitle_flag   = False,
-             is_checked      = True,
-             is_open         = False,
-             level_id        = 1
          )
         User.objects.create(
             id           = 1,
@@ -137,7 +165,7 @@ class MyPageTest(TestCase):
         ProductLike.objects.all().delete()
         Category.objects.all().delete()
         SubCategory.objects.all().delete()
- 
+
     def test_mypage_get_success(self):
         self.maxDiff = None
         response = client.get('/user/me?user=1')
@@ -145,7 +173,7 @@ class MyPageTest(TestCase):
         self.assertEqual(response.json(),{
             'message':'Success','mypage':[{
                 'my_info':{
-                    "coupon_num": 15,
+                    "coupon_num": 0,
                     "liked_num": 0,
                     "order_count": 2,
                     "point": 10,
