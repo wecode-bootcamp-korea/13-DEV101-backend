@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Category(models.Model):
     name = models.CharField(max_length=20)
 
@@ -32,9 +31,9 @@ class Product(models.Model):
     sub_category   = models.ForeignKey(SubCategory, on_delete=models.CASCADE)
     creator        = models.ForeignKey('user.Creator', on_delete=models.CASCADE)
     level          = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True)
-    coupon         = models.ForeignKey(Coupon, on_delete=models.SET_DEFAULT, default=0)
-    price          = models.DecimalField(max_digits=16, decimal_places=2)
-    discount       = models.DecimalField(max_digits=3, decimal_places=2)
+    coupon         = models.ForeignKey(Coupon, on_delete=models.SET_DEFAULT, default=4)
+    price          = models.DecimalField(max_digits=16, decimal_places=2, null=True)
+    discount       = models.DecimalField(max_digits=3, decimal_places=2, null=True)
     chapter        = models.PositiveIntegerField(default=1)
     chapter_detail = models.PositiveIntegerField(default=0)
     subtitle_flag  = models.BooleanField(default=False)
@@ -61,10 +60,11 @@ class ProductTag(models.Model):
         db_table = 'product_tags'
 
 class Review(models.Model):
-    product  = models.ForeignKey(Product, on_delete=models.CASCADE)
-    user     = models.ForeignKey('user.User', on_delete=models.CASCADE)
-    good_bad = models.BooleanField(null=True)
-    content  = models.TextField()
+    product    = models.ForeignKey(Product, on_delete=models.CASCADE)
+    user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
+    good_bad   = models.BooleanField(null=True)
+    content    = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'reviews'
@@ -87,6 +87,7 @@ class Post(models.Model):
     product    = models.ForeignKey(Product, on_delete=models.CASCADE)
     user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
     content    = models.TextField()
+    image_url  = models.URLField(max_length=2000, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -103,6 +104,7 @@ class Comment(models.Model):
     post       = models.ForeignKey(Post, on_delete=models.CASCADE)
     user       = models.ForeignKey('user.User', on_delete=models.CASCADE)
     content    = models.TextField()
+    image_url  = models.URLField(max_length=2000, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
