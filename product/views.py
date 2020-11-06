@@ -6,6 +6,8 @@ from django.views import View
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.db         import IntegrityError
+from django.db.models import Count, Q
+
 
 from .models import Product, Post, Comment
 from user.models import User
@@ -167,5 +169,161 @@ class CommentView(View):
         except IntegrityError:
             return JsonResponse({'message':'POST DOES NOT EXIST'}, status=400)
 
-        
+class ProductsView(View):
+    def get(self, request):
+        filter_set={}
+        if request.GET.get('category'):
+            filter_set['category__name'] = request.GET['category']
+            
+        TOP_TEN          = 10
+        OFFSET           = int(request.GET.get('offset'))
+        LIMIT            = int(request.GET.get('limit'))
+        products         = cache.get_or_set('products', Product.objects.select_related(
+            'sub_category', 
+            'creator', 
+            ).prefetch_related(
+                'image_set',
+                'productlike_set', 
+                'cheered_set', 
+                'review_set').all())
+        top_products     = products.annotate(count=Count('productlike__product_id')).filter(is_open=True, **filter_set).order_by('-count')
+        planned_products = products.filter(is_open=False, **filter_set)
+        updated_products = products.filter(is_open=True, **filter_set).order_by('-updated_at')
+
+        if OFFSET >= len(updated_products):
+            return JsonResponse({'message':'PAGE_NOT_FOUND'}, status=404)
+        updated_products=updated_products[OFFSET:OFFSET+LIMIT]
+
+        data={
+            'top_10_data':[
+                {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'thumbs_up'   : product.review_set.filter(good_bad=True).count()/product.review_set.all().count(),
+                    'price'       : product.price,
+                    'discount'    : product.discount,
+                    'coupon'      : product.coupon.name
+                }
+            if product.review_set.all().count()!=0 else {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'thumbs_up'   : 0,
+                    'price'       : product.price,
+                    'discount'    : product.discount,
+                    'coupon'      : product.coupon.name
+                } for product in top_products[:TOP_TEN]],
+
+            'planned_data':[
+                {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'is_open'     : product.is_open,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'cheered'     : product.cheered_set.count(),
+                } for product in planned_products],
+
+            'updated_data':[
+                {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'thumbs_up'   : product.review_set.filter(good_bad=True).count()/product.review_set.all().count(),
+                    'coupon'      : product.coupon.name,
+                    'updated_at'  : product.updated_at
+                }
+            if product.review_set.all().count()!=0 else {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'thumbs_up'   : 0,
+                    'coupon'      : product.coupon.name,
+                    'updated_at'  : product.updated_at
+                } for product in updated_products]
+            }
+
+        return JsonResponse(data, status=200)
+
+class SearchView(View):
+    def get(self, request):
+        try:
+            products   = Product.objects.select_related(
+                'category',
+                'sub_category',
+                'coupon'
+                ).prefetch_related(
+                    'review_set', 
+                    'productlike_set',
+                    'image_set'
+                    ).filter(is_open=True)
+            filter_set = {}
+            query      = Q()
+            sortings   = {
+                '1' : '-created_at',
+                '2' : products.filter(Q(review__good_bad=True)|Q(review__good_bad=None)).annotate(count=Count('review__good_bad')).order_by('-count'),
+                '3' : products.annotate(count=Count('productlike__product_id')).order_by('-count')
+            }
+            search  = request.GET.get('query')
+            sorting = request.GET.get('sort')
+            if search:
+                query &= Q(name__contains=search) | Q(sub_category__name__contains=search) | Q(basicinfo__category_detail__contains=search)
+
+            if request.GET.get('category'):
+                filter_set['sub_category__name']=request.GET['category']
+
+            if sorting:
+                if sorting=='1':
+                    products = products.order_by(sortings[sorting])
+                else:
+                    products = sortings[sorting]
+
+            products = products.filter(query, **filter_set)
+
+            data = {
+                'data':[
+                {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'thumbs_up'   : product.review_set.filter(good_bad=True).count()/product.review_set.all().count(),
+                    'price'       : product.price,
+                    'discount'    : product.discount,
+                    'coupon'      : product.coupon.name
+                } if product.review_set.all().count()!=0 else {
+                    'product_id'  : product.id,
+                    'image_url'   : product.image_set.first().image_url,
+                    'sub_category': product.sub_category.name,
+                    'mentor'      : product.creator.nickname,
+                    'title'       : product.name,
+                    'like_count'  : product.productlike_set.all().count(),
+                    'thumbs_up'   : 0,
+                    'price'       : product.price,
+                    'discount'    : product.discount,
+                    'coupon'      : product.coupon.name
+                    } for product in products]}
+            
+            return JsonResponse(data, status=200)
+
+        except KeyError:
+            return JsonResponse({'message':'WRONG SORTING'}, status=400)
+   
 
