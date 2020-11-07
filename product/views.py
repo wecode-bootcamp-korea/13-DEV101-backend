@@ -1,6 +1,7 @@
 import json
 import boto3
 import datetime
+import uuid
 
 from django.views import View
 from django.http import JsonResponse
@@ -8,8 +9,7 @@ from django.core.cache import cache
 from django.db         import IntegrityError
 from django.db.models import Count, Q
 
-
-from .models import Product, Post, Comment
+from .models import Product, Post, Comment,ProductLike
 from user.models import User
 from my_settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
@@ -49,6 +49,7 @@ class DetailView(View):
                     'title'       : product.name,
                     'price'       : product.price,
                     'discount'    : product.discount,
+                    'liked'       : product.productlike_set.filter(user_id=1).exists(), # 데코레이터 추가하면 변경
                     'heart'       : product.productlike_set.count()
                 },
 
@@ -102,12 +103,12 @@ class DetailView(View):
                         'date'         : post.created_at,
                         'description'  : post.content,
                         'comments': [{
-                            'comment_id'   : comment.id,
-                            'profile_image': comment.user.image_url,
-                            'nickname'     : comment.user.name,
-                            'date'         : comment.created_at,
-                            'description'  : comment.content,
-                            'image_url'    : comment.image_url
+                            'comment_id'       : comment.id,
+                            'profile_image'    : comment.user.image_url,
+                            'nickname'         : comment.user.name,
+                            'date'             : comment.created_at,
+                            'description'      : comment.content,
+                            'comment_image_url': comment.image_url
                         } for comment in post.comment_set.all()]
                     }
                 for post in product.post_set.all() if post.user_id!=User.objects.get(creator_id=product.creator_id).id]
@@ -129,9 +130,9 @@ class CommentView(View):
         try:
             user_id=request.POST['user_id']
             content=request.POST['content']
-            file=request.FILES.getlist('file')
+            file=request.FILES['file']
             if file:
-                filename=str(datetime.datetime.now())+User.objects.get(id=user_id).name+file.name
+                filename=str(uuid.uuid1()).replace('-','')
                 
                 self.s3_client.upload_fileobj(
                     file,
@@ -326,4 +327,24 @@ class SearchView(View):
         except KeyError:
             return JsonResponse({'message':'WRONG SORTING'}, status=400)
    
+class ProductLikeView(View):
+    def post(self, request, product_id):
+        try:
+            # 데코레이터 완성되면 붙일 예정
+            user_id=1
+            product=Product.objects.prefetch_related('productlike_set').get(id=product_id)
+            if product.productlike_set.filter(user_id=user_id).exists():
+                product.productlike_set.get(user_id=user_id).delete()
+                cache.delete('product')
+            else:
+                ProductLike.objects.create(user_id=user_id, product_id=product_id)
+                cache.delete('product')
 
+            like_count=ProductLike.objects.filter(product_id=product_id).count()
+            liked=ProductLike.objects.filter(product_id=product_id, user_id=user_id).exists()
+            return JsonResponse({
+                'liked':liked, 
+                'like_count':like_count}, status=200)
+
+        except Product.DoesNotExist:
+            return JsonResponse({'message':'NO_PRODUCT'}, status=400)
