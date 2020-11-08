@@ -115,7 +115,6 @@ class DetailView(View):
             }
             
             return JsonResponse(data, status=200)
-            return JsonResponse({'message': 'PAGE DOES NOT EXIST'}, status=404)
             
         except Product.DoesNotExist:
             return JsonResponse({'message':'PRODUCT DOES NOT EXIST'}, status=400)
@@ -225,11 +224,11 @@ class ProductsView(View):
             'planned_data':[
                 {
                     'product_id'  : product.id,
-                    'image_url'   : product.image_set.first().image_url,
+                    'image_url'   : product.titlecover_set.first().thumbnail_image_url,
                     'is_open'     : product.is_open,
                     'sub_category': product.sub_category.name,
                     'mentor'      : product.creator.nickname,
-                    'title'       : product.name,
+                    'title'       : product.titlecover_set.first().title,
                     'like_count'  : product.productlike_set.all().count(),
                     'cheered'     : product.cheered_set.count(),
                 } for product in planned_products],
@@ -348,3 +347,28 @@ class ProductLikeView(View):
 
         except Product.DoesNotExist:
             return JsonResponse({'message':'NO_PRODUCT'}, status=400)
+class PackageView(View):
+    def get(self, request, product_id):
+        try:
+            # user merge 되면 바꿀 예정
+            user_id = 1
+            product = Product.objects.select_related(
+                'creator', 
+                'level', 
+                'coupon'
+                ).get(id=product_id)
+            
+            data={
+                'product_id'   : product.id,
+                'package':{
+                    'creator'  : product.creator.nickname,
+                    'price'    : product.price,
+                    'discount' : product.discount,
+                    'discounted_price':int(product.price*(1-product.discount))
+                }
+            }
+            
+            return JsonResponse(data, status=200)
+            
+        except Product.DoesNotExist:
+            return JsonResponse({'message':'PRODUCT DOES NOT EXIST'}, status=400)
