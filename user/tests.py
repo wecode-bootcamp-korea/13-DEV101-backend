@@ -3,15 +3,18 @@ import bcrypt
 import jwt
 import unittest
 
-from django.test    import TestCase,Client
-from unittest.mock  import patch,MagicMock
+from io                             import BytesIO
+from PIL                            import Image as img
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test                    import TestCase,Client
+from unittest.mock                  import patch,MagicMock
 
-from product.models import Product,ProductLike,Image,Category,SubCategory,Level,Coupon,Watched
 from user.models    import User,Creator,SocialPlatform
+from product.models import Product,ProductLike,Image,Category,SubCategory,Level,Coupon,Watched,BasicInfo,TitleCover,Introduction
 
 from my_settings import SECRET_KEY,ALGORITHM
 
-#client = Client()
+client = Client()
 
 class UserSignupTest(TestCase):
     def setUp(self):
@@ -28,91 +31,6 @@ class UserSignupTest(TestCase):
             "password"     : "1234",
             "re_password"  : "1234"
         }
-
-
-        response = client.post('/user/signup',json.dumps(user),content_type='application/json')
-        self.assertEqual(response.status_code,201)
-
-class UserSigninTest(TestCase):
-    def setUp(self):
-        client = Client()
-        User.objects.create(
-            email = 'hgggg@gmail.com',
-            password = bcrypt.hashpw("1234".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
-            name = "hh",
-            phone_number = "01012331233"
-        )
-
-    def tearDown(self):
-            User.objects.all().delete()
-
-    def test_post_user_view(self):
-        user = {
-            "email"        : "hgggg@gmail.com",
-            "password"     : "1234",
-        }
-
-        response = client.post('/user/signin',json.dumps(user),content_type='application/json')
-        self.assertEqual(response.status_code,201)
-
-class UserSignupTest(TestCase):
-    def setUp(self):
-        client = Client()
-
-    def tearDown(self):
-            User.objects.all().delete()
-
-    def test_post_user_view(self):
-        user = {
-            "name"         : "hn",
-            "email"        : "hgggg@gmail.com",
-            "phone_number" : "01084612249",
-            "password"     : "1234",
-            "re_password"  : "1234"
-        }
-
-
-        response = client.post('/user/signup',json.dumps(user),content_type='application/json')
-        self.assertEqual(response.status_code,201)
-
-class UserSigninTest(TestCase):
-    def setUp(self):
-        client = Client()
-        User.objects.create(
-            email = 'hgggg@gmail.com',
-            password = bcrypt.hashpw("1234".encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
-            name = "hh",
-            phone_number = "01012331233"
-        )
-
-    def tearDown(self):
-            User.objects.all().delete()
-
-    def test_post_user_view(self):
-        user = {
-            "email"        : "hgggg@gmail.com",
-            "password"     : "1234",
-        }
-
-        response = client.post('/user/signin',json.dumps(user),content_type='application/json')
-        self.assertEqual(response.status_code,201)
-
-class UserSignupTest(TestCase):
-    def setUp(self):
-        client = Client()
-
-    def tearDown(self):
-            User.objects.all().delete()
-
-    def test_post_user_view(self):
-        user = {
-            "name"         : "hn",
-            "email"        : "hgggg@gmail.com",
-            "phone_number" : "01084612249",
-            "password"     : "1234",
-            "re_password"  : "1234"
-        }
-
 
         response = client.post('/user/signup',json.dumps(user),content_type='application/json')
         self.assertEqual(response.status_code,201)
@@ -141,6 +59,7 @@ class UserSigninTest(TestCase):
 
 class MyPageTest(TestCase):
     def setUp(self):
+        client = Client()
         Category.objects.create(
             id = 1,
             name = "크리에이티브"
@@ -314,7 +233,6 @@ class MyPageTest(TestCase):
         })
 
 class KakaoSignInTest(TestCase):
-
     def setUp(self):
         SocialPlatform.objects.create(id=1,platform='kakao')
 
@@ -335,10 +253,294 @@ class KakaoSignInTest(TestCase):
                 }
 
         mocked_requests.get = MagicMock(return_value = KakaoResponse())
-        headers  = {'HTTP_AUTHORIZATION':'fake_token.1234'}
+        headers  = {'HTTP_Authorization':'fake_token.1234'}
         response = client.get('/user/kakao/login', **headers)
-        token    = jwt.encode({'id': "12345"},SECRET_KEY,algorithm= ALGORITHM).decode('utf-8')
+#        token    = jwt.encode({'id': "12345"},SECRET_KEY,algorithm= ALGORITHM).decode('utf-8')
         self.assertEqual(response.status_code, 200)
 
 if __name__ == '__main__':
     unittest.main()
+
+class BasicInfoTest(TestCase):
+    def setUp(self):
+        Category.objects.create(
+            id   = 1,
+            name = "category"
+        )
+        SubCategory.objects.create(
+            id           = 1,
+            category_id  = 1,
+            name = "sub"
+        )
+        Creator.objects.create(
+            id           = 1,
+            nickname     = "phh",
+            image_url    = "http://djakj.djka.co",
+            introduction = "yeaaaaaaaaaa"
+        )
+        User.objects.create(
+            id   = 1,
+            name = "hh",
+            creator_id = 1
+        )
+        Coupon.objects.create(
+            id   = 1,
+            name = 'coupon'
+        )
+        Level.objects.create(
+            id   = 1,
+            name = 'level'
+        )
+        Product.objects.create(
+            id              = 1,
+            name            = "product",
+            category_id     = 1,
+            sub_category_id = 1,
+            creator_id      = 1,
+            coupon_id       = 1,
+            level_id        = 1
+        )
+        BasicInfo.objects.create(
+            id = 1,
+            product_id = 1,
+            category_id = 1,
+            sub_category_id = 1,
+            category_detail = 'category_detail',
+            level_id = 1
+        )
+
+    def tearDown(self):
+        Category.objects.all().delete()
+        SubCategory.objects.all().delete()
+        Creator.objects.all().delete()
+        User.objects.all().delete()
+        Product.objects.all().delete()
+        Coupon.objects.all().delete()
+        BasicInfo.objects.all().delete()
+        Level.objects.all().delete()
+
+    def test_basic_info(self):
+        client = Client()
+        self.maxDiff = None
+        data = {
+            'category' : 'category',
+            'sub_category' : 'sub',
+            'category_detail' : 'category_detail',
+            'level' : 'level',
+            'nickname' : 'nickname'
+        }
+        response = client.post('/user/1/basicinfo',data)
+
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),
+                         {
+                             'message':'Success',
+                             'basic_info':{
+                                'category':'category',
+                                 'sub_category':'sub',
+                                 'category_detail':'category_detail',
+                                 'level':'level',
+                                 'image_url':'',
+                                 'product_id':1
+                             }
+                         })
+
+class CoverTitleTest(TestCase):
+    def setUp(self):
+        Category.objects.create(
+            id   = 1,
+            name = "category"
+        )
+        SubCategory.objects.create(
+            id           = 1,
+            category_id  = 1,
+            name = "sub"
+        )
+        Creator.objects.create(
+            id           = 1,
+            nickname     = "phh",
+            image_url    = "http://djakj.djka.co",
+            introduction = "yeaaaaaaaaaa"
+        )
+        User.objects.create(
+            id   = 1,
+            name = "hh",
+            creator_id = 1
+        )
+        Coupon.objects.create(
+            id   = 1,
+            name = 'coupon'
+        )
+        Level.objects.create(
+            id   = 1,
+            name = 'level'
+        )
+        Product.objects.create(
+            id              = 1,
+            name            = "product",
+            category_id     = 1,
+            sub_category_id = 1,
+            creator_id      = 1,
+            coupon_id       = 1,
+            level_id        = 1
+        )
+        BasicInfo.objects.create(
+            id = 1,
+            product_id = 1,
+            category_id = 1,
+            sub_category_id = 1,
+            category_detail = 'category_detail',
+            level_id = 1
+        )
+        Introduction.objects.create(
+            product_id = 1,
+            theme_image_url = '',
+            process_image_url = '',
+            work_image_url = '',
+            theme_description = 'qwe',
+            process_description = 'qwe',
+            work_description = 'qwe'
+        )
+
+    def tearDown(self):
+        Category.objects.all().delete()
+        SubCategory.objects.all().delete()
+        Creator.objects.all().delete()
+        User.objects.all().delete()
+        Coupon.objects.all().delete()
+        Level.objects.all().delete()
+        Product.objects.all().delete()
+        BasicInfo.objects.all().delete()
+        Introduction.objects.all().delete()
+        TitleCover.objects.all().delete()
+
+    @patch('user.views.CoverTitleView.s3_client')
+    def test_title_cover(self,mocked_client):
+        client = Client()
+        self.maxDiff = None
+        stream = BytesIO() # pillow로 resizing한 이미지 bytes화
+        image = img.new("RGB",(100,100))
+        image.save(stream, format='jpeg')
+
+        cover_image_file      = SimpleUploadedFile("cover.jpg", stream.getvalue(), content_type = "image/jpg")
+        thumbnail_image_file  = SimpleUploadedFile("thumbnail.jpg", stream.getvalue(), content_type = "image/jpg")
+        image_files = [cover_image_file, thumbnail_image_file]
+        data = {
+            'title' : 'title',
+            'file'  : image_files
+        }
+        response = client.post('/user/1/covertitle/1',data,format='multipart')
+
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),
+                         {
+                             'message':'Success'
+                         })
+
+class IntroductionView(TestCase):
+    def setUp(self):
+        Category.objects.create(
+            id   = 1,
+            name = "category"
+        )
+        SubCategory.objects.create(
+            id           = 1,
+            category_id  = 1,
+            name = "sub"
+        )
+        Creator.objects.create(
+            id           = 1,
+            nickname     = "phh",
+            image_url    = "http://djakj.djka.co",
+            introduction = "yeaaaaaaaaaa"
+        )
+        User.objects.create(
+            id   = 1,
+            name = "hh",
+            creator_id = 1
+        )
+        Coupon.objects.create(
+            id   = 1,
+            name = 'coupon'
+        )
+        Level.objects.create(
+            id   = 1,
+            name = 'level'
+        )
+        Product.objects.create(
+            id              = 1,
+            name            = "product",
+            category_id     = 1,
+            sub_category_id = 1,
+            creator_id      = 1,
+            coupon_id       = 1,
+            level_id        = 1
+        )
+        BasicInfo.objects.create(
+            id = 1,
+            product_id = 1,
+            category_id = 1,
+            sub_category_id = 1,
+            category_detail = 'category_detail',
+            level_id = 1
+        )
+        Introduction.objects.create(
+            product_id = 1,
+            theme_image_url = '',
+            process_image_url = '',
+            work_image_url = '',
+            theme_description = 'qwe',
+            process_description = 'qwe',
+            work_description = 'qwe'
+        )
+        TitleCover.objects.create(
+            product_id = 1,
+            title = 'title',
+            cover_image_url = '',
+            thumbnail_image_url = ''
+        )
+
+    def tearDown(self):
+        Category.objects.all().delete()
+        SubCategory.objects.all().delete()
+        Creator.objects.all().delete()
+        User.objects.all().delete()
+        Coupon.objects.all().delete()
+        Level.objects.all().delete()
+        Product.objects.all().delete()
+        BasicInfo.objects.all().delete()
+        Introduction.objects.all().delete()
+        TitleCover.objects.all().delete()
+
+    def test_title_cover(self):
+        client = Client()
+        self.maxDiff = None
+        data = {
+            'theme_desc'   : 'qwe',
+            'process_desc' : 'qwe',
+            'work_desc'    : 'qwe',
+            'file'  : ['','','']
+        }
+
+        response = client.post('/user/1/introduction/1',data)
+
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json(),{
+            'message':'Success','introduction':{
+                    'theme_image_url'     : '',
+                    'process_image_url'   : '',
+                    'work_image_url'      : '',
+                    'theme_description'   : 'qwe',
+                    'process_description' : 'qwe',
+                    'work_description'    : 'qwe',
+                    "category"            : 'category',
+                    "sub_category"        : 'sub',
+                    "category_detail"     : 'category_detail',
+                    "level"               : 'level',
+                    "image_url"           : '',
+                    "product_id"          : 1,
+                    "title"               : 'title',
+                    "cover_image_url"     : '',
+                    "thumnail_image_url"  : ''
+                }
+        })

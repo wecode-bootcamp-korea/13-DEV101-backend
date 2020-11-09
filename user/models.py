@@ -16,7 +16,7 @@ class Creator(models.Model):
 
 class User(models.Model):
     name            = models.CharField(max_length=45)
-    email           = models.EmailField(max_length=300, null=True)
+    email           = models.EmailField(max_length=300, unique=True)
     password        = models.CharField(max_length=300, null=True)
     phone_number    = models.CharField(max_length=45, null=True)
     image_url       = models.URLField(max_length=2000, null=True)
