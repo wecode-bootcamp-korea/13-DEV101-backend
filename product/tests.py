@@ -247,7 +247,7 @@ class SelectPackageTest(TestCase):
         self.assertEqual(response.status_code,400)
         self.assertEqual(response.json(),
             {
-                'message':'PRODUCT DOES NOT EXIST'
+                'message':'PRODUCT_DOES_NOT_EXIST'
             }
         )
 
@@ -357,7 +357,7 @@ class CommentTest(TransactionTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(),
             {
-                'message':'POST DOES NOT EXIST'
+                'message':'POST_DOES_NOT_EXIST'
             }
         )
 
@@ -371,7 +371,7 @@ class CommentTest(TransactionTestCase):
         self.assertEqual(response.status_code,400)
         self.assertEqual(response.json(),
             {
-                'message':'KEY ERROR'
+                'message':'KEY_ERROR'
             }
         )
 
@@ -533,7 +533,7 @@ class ProductListTest(TestCase):
     def test_product_list_get_success(self):
         client=Client()
         self.maxDiff = None
-        response=client.get('/products')
+        response=client.get('/products?offset=0&limit=20')
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json(),
             {
@@ -679,7 +679,7 @@ class ProductSearchTest(TestCase):
         self.assertEqual(response.status_code,400)
         self.assertEqual(response.json(),
             {
-                'message':'WRONG SORTING'
+                'message':'WRONG_SORTING'
             }
         )
 
@@ -688,3 +688,96 @@ class ProductSearchTest(TestCase):
         response=client.get('/search/class1')
         self.assertEqual(response.status_code,404)
     
+class CheerTest(TestCase):
+    def setUp(self):
+        Category.objects.create(
+            id=1,
+            name='category1'
+        )
+        SubCategory.objects.create(
+            id=1,
+            category_id=1,
+            name='sub_category1'
+        )
+        Coupon.objects.create(
+            id=1,
+            name='coupon1'
+        )
+        Level.objects.create(
+            id=1,
+            name='level1'
+        )
+        Creator.objects.create(
+            id=1,
+            image_url='www.url.com',
+            nickname='nickname',
+            introduction='hihihi'
+        )
+        Product.objects.create(
+            id=1,
+            name='class1',
+            category_id=1,
+            sub_category_id=1,
+            creator_id=1,
+            level_id=1,
+            coupon_id=1,
+            price=300000,
+            discount=0.55,
+            chapter=20,
+            chapter_detail=33,
+            subtitle_flag=True,
+            is_checked=True,
+            is_open=False
+        )
+        Product.objects.create(
+            id=2,
+            name='class1',
+            category_id=1,
+            sub_category_id=1,
+            creator_id=1,
+            level_id=1,
+            coupon_id=1,
+            price=300000,
+            discount=0.55,
+            chapter=20,
+            chapter_detail=33,
+            subtitle_flag=True,
+            is_checked=True,
+            is_open=True
+        )
+        User.objects.create(
+            id=1,
+            name='name',
+            email='email@emai.com',
+            password='password',
+            phone_number='01012345678',
+            image_url='www.url.com',
+            is_active=True,
+            creator_id=1,
+            cheer_point=10
+        )
+
+    def tearDown(self):
+        Product.objects.all().delete()
+        Category.objects.all().delete()
+        SubCategory.objects.all().delete()
+        Coupon.objects.all().delete()
+        Level.objects.all().delete()
+        Creator.objects.all().delete()
+        User.objects.all().delete()
+
+    def test_cheer_post_success(self):
+        client=Client()
+        self.maxDiff = None
+        response=client.post('/product/1/cheer')
+        self.assertEqual(response.status_code,200)
+
+    def test_cheer_post_fail(self):
+        client=Client()
+        response=client.post('/product/2/cheer')
+        self.assertEqual(response.status_code,400)
+        self.assertEqual(response.json(),
+            {
+                'message':'OPENED_CLASS'
+            }
+        )
