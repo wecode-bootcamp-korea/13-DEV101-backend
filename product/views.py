@@ -178,12 +178,13 @@ class ProductsView(View):
         TOP_TEN          = 10
         OFFSET           = int(request.GET.get('offset'))
         LIMIT            = int(request.GET.get('limit'))
-        products         = cache.get_or_set('products', Product.objects.select_related(
+        products         = cache.get_or_set('products',Product.objects.select_related(
             'sub_category', 
             'creator', 
             ).prefetch_related(
                 'image_set',
-                'productlike_set', 
+                'productlike_set',
+                'titlecover_set',
                 'cheered_set', 
                 'review_set').all())
         top_products     = products.annotate(count=Count('productlike__product_id')).filter(is_open=True, **filter_set).order_by('-count')
@@ -231,7 +232,7 @@ class ProductsView(View):
                     'title'       : product.titlecover_set.first().title,
                     'like_count'  : product.productlike_set.all().count(),
                     'cheered'     : product.cheered_set.count(),
-                } for product in planned_products],
+                } for product in planned_products if product.titlecover_set.exists()],
 
             'updated_data':[
                 {
