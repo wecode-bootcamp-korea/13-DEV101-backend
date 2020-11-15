@@ -10,13 +10,13 @@ import uuid
 from django.db.models  import Q
 from django.views      import View
 
-# TODO : merge후 수정예정   
-# from django.core.cache import cache
+
+from django.core.cache import cache
 
 from django.http       import JsonResponse,HttpResponse
 
 from user.utils       import user_validator
-from user.models      import User,Creator,UserCoupon
+from user.models      import User,Creator,UserCoupon, SocialPlatform
 from product.models   import Category,SubCategory,Coupon,Level,Product,Introduction,TitleCover,BasicInfo,Watched,ProductLike
 
 from my_settings      import SECRET_KEY,ALGORITHM,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
@@ -108,6 +108,8 @@ class KakaoLoginView(View):
 
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        except Exception as e:
+            return JsonResponse({'message': f"{e}"}, status=400)
 
 class MyPageView(View):
     @user_validator
@@ -131,7 +133,7 @@ class MyPageView(View):
 
             seen_class = [{
                 "id"          : watch.product.id,
-                "class_image" : watch.product.image_set.all()[0].image_url,
+                "class_image" : watch.product.image_set.all()[0].image_url if watch.product.is_open else watch.product.titlecover_set.first().thumbnail_image_url,
                 "isOpening"   : watch.product.is_open,
                 "category"    : watch.product.sub_category.name,
                 "mentor"      : watch.product.creator.nickname,
@@ -144,7 +146,7 @@ class MyPageView(View):
                 "month"       : 5
             } if watch.product.review_set.all().count() != 0 else {
                 "id"          : watch.product.id,
-                "class_image" : watch.product.image_set.all()[0].image_url,
+                "class_image" : watch.product.image_set.all()[0].image_url if watch.product.is_open else watch.product.titlecover_set.first().thumbnail_image_url,
                 "isOpening"   : watch.product.is_open,
                 "category"    : watch.product.sub_category.name,
                 "mentor"      : watch.product.creator.nickname,
@@ -161,7 +163,7 @@ class MyPageView(View):
 
             liked_class = [{
                 "id"           : likeproduct.product.id,
-                "class_image"  : likeproduct.product.image_set.first().image_url,
+                "class_image"  : likeproduct.product.image_set.first().image_url if likeproduct.product.is_open else likeproduct.product.titlecover_set.first().thumbnail_image_url,
                 "isOpening"    : likeproduct.product.is_open,
                 "category"     : likeproduct.product.sub_category.name,
                 "mentor"       : likeproduct.product.creator.nickname,
@@ -174,7 +176,7 @@ class MyPageView(View):
                 "month"        : 5
             } if likeproduct.product.review_set.all().count() != 0 else {
                 "id"           : likeproduct.product.id,
-                "class_image"  : likeproduct.product.image_set.first().image_url,
+                "class_image"  : likeproduct.product.image_set.first().image_url if likeproduct.product.is_open else likeproduct.product.titlecover_set.first().thumbnail_image_url,
                 "isOpening"    : likeproduct.product.is_open,
                 "category"     : likeproduct.product.sub_category.name,
                 "mentor"       : likeproduct.product.creator.nickname,
@@ -195,8 +197,8 @@ class MyPageView(View):
 
                 class_made = [{
                     'id'          : product.id,
-                    'class_image' : product.image_set.first().image_url,
-                    'title'       : product.name,
+                    'class_image' : product.image_set.first().image_url if product.is_open else product.titlecover_set.first().thumbnail_image_url,
+                    'title'       : product.name if product.name else product.titlecover_set.first().title,
                     'category'    : product.sub_category.name,
                     'mentor'      : creator.nickname,
                 }for product in creator_products]
@@ -217,40 +219,6 @@ class MyPageView(View):
         except Exception as e:
             return JsonResponse({'message':f"{e}"},status=400)
 
-
-
-class KakaoLoginView(View):
-    def get(self,request):
-        try:
-            access_token = request.headers['Authorization']
-            kakao_header = {'Authorization':f'Bearer {access_token}'}
-
-            url          = 'https://kapi.kakao.com/v2/user/me'
-            response     = requests.get(url, headers=kakao_header)
-            user         = response.json()
-
-            if user['kakao_account']['profile'].get('profile_image_url'):
-                image = user['kakao_account']['profile']['profile_image_url']
-            else:
-                image = None
-
-            if user.get('id'):
-                user = User.objects.get_or_create(
-                    social_login_id = user.get('id'),
-                    name            = user['kakao_account']['profile']['nickname'],
-                    social          = SocialPlatform.objects.get(platform='kakao'),
-                    image_url       = image
-                    )[0]
-                access_token = jwt.encode({'id': user.id},SECRET_KEY,algorithm= ALGORITHM).decode('utf-8')
-
-                return JsonResponse({"access_token": access_token}, status=200)
-
-            return JsonResponse({"Message": "INVALID_TOKEN"}, status=401)
-
-        except KeyError:
-            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
-        except Exception as e:
-            return JsonResponse({'message':f"{e}"},status=400)
 
 class BasicInfoView(View):
     @user_validator
@@ -312,10 +280,9 @@ class BasicInfoView(View):
                 user.creator_id = new_creator.id
                 user.save()
 
-# TODO : merge후 수정예정   
-                #cache.delete('products')
+                cache.delete('products')
 
-                return JsonResponse({'message':'Success'},status=200)
+                return JsonResponse({'message':'Success','product_id':new_product.id},status=200)
 
         except KeyError:
             return JsonResponse({'message':'KeyError'},status=400)
@@ -403,8 +370,8 @@ class CoverTitleView(View):
                 thumbnail_image_url = file_urls[1]
             )
 
-# TODO : merge후 수정예정   
-            #cache.delete('products')
+
+            cache.delete('products')
 
             return JsonResponse({'message':'Success'},status=200)
 
@@ -476,9 +443,9 @@ class IntroductionView(View):
                 process_description   = process_desc,
                 work_description      = work_desc
             )
+            
 
-# TODO : merge후 수정예정   
-            #cache.delete('products')
+            cache.delete('products')
 
             return JsonResponse({'message':'Success'},status=200)
 
