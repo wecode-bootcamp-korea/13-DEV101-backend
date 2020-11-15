@@ -9,7 +9,7 @@ from django.core.cache import cache
 from django.db         import IntegrityError
 from django.db.models import Count, Q, F
 
-from .models import Product, Post, Comment, ProductLike, Cheered
+from .models import Product, Post, Comment, ProductLike, Cheered, Watched
 from user.models import User
 from my_settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 from user.utils  import user_validator
@@ -43,7 +43,9 @@ class DetailView(View):
                     'basicinfo_set',
                     'titlecover_set',
                     ).get(id=product_id)
-
+            if not Watched.objects.filter(product_id=product_id, user_id=user_id).exists():
+                Watched.objects.create(product_id=product_id, user_id=user_id)
+                
             if product.is_open:
                 data={
                     'product_id'   : product.id,
